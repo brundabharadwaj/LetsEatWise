@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * This controller acts as API exposed from swiggy to
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/swiggy")
