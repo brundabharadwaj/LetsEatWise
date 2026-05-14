@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   # Spring Boot Application
@@ -12,6 +11,15 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SERVER_PORT=8080
+      # Datadog Configuration
+      - DD_API_KEY=${DD_API_KEY}
+      - DD_SITE=datadoghq.eu
+      - DD_SERVICE=food-comparison-app
+      - DD_ENV=development
+      - DD_TRACE_SAMPLE_RATE=1.0
+      - DD_LOGS_INJECTION=true
+      - DD_AGENT_HOST=datadog-agent
+      - DD_AGENT_PORT=8126
     networks:
       - food-comparison-network
     healthcheck:
@@ -20,30 +28,53 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    depends_on:
-      - db
+#    depends_on:
+#      - db
     volumes:
       - ./logs:/app/logs
 
-  # PostgreSQL Database (optional, for future use)
-  db:
-    image: postgres:15-alpine
-    container_name: food-comparison-db
+  datadog-agent:
+    image: gcr.io/datadoghq/agent:7
+    container_name: datadog-agent
     environment:
-      POSTGRES_DB: food_comparison_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      - DD_API_KEY=${DD_API_KEY}
+      - DD_SITE=datadoghq.eu
+      - DD_APM_ENABLED=true
+      - DD_APM_NON_LOCAL_TRAFFIC=true
+      - DD_LOGS_ENABLED=true
+      - DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true
+      - DD_CONTAINER_EXCLUDE_LOGS=name:datadog-agent
     ports:
-      - "5432:5432"
+      - "8126:8126/tcp"  # APM
+      - "8125:8125/udp"  # Metrics
+      - "5000:5000"      # Datadog Agent GUI (optional)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
     networks:
       - food-comparison-network
-    volumes:
-      - db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+
+
+  # PostgreSQL Database (optional, for future use)
+#  db:
+#    image: postgres:15-alpine
+#    container_name: food-comparison-db
+#    environment:
+#      POSTGRES_DB: food_comparison_db
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: postgres
+#    ports:
+#      - "5432:5432"
+#    networks:
+#      - food-comparison-network
+#    volumes:
+#      - db-data:/var/lib/postgresql/data
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U postgres"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
 
 networks:
   food-comparison-network:
